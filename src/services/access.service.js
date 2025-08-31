@@ -11,23 +11,76 @@ const RoleShop = {
   ADMIN: 'admin',
 };
 const { createTokenPair } = require('../auth/authUtils');
-
+const {
+  BadRequestError,
+  AuthenticationError,
+} = require('../core/error.response');
+const { findByEmail } = require('./shop.service');
+const { get } = require('http');
 class AccessService {
+  static login = async ({ email, password, refreshToken = null }) => {
+    // 1. check if shop exists
+    if (!email) {
+      throw new BadRequestError('Invalid email');
+    }
+    const foundShop = await findByEmail({ email });
+    if (!foundShop) {
+      throw new BadRequestError('Shop not registered');
+    }
+
+    // 2. check if password matches
+    const match = await bcrypt.compare(password, foundShop.password);
+    if (!match) {
+      throw new AuthenticationError('Authentication failed');
+    }
+
+    // 3. create privateKey and publicKey by rsa256
+    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem',
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem',
+      },
+    });
+    console.log('privateKey', privateKey);
+    console.log('publicKey', publicKey);
+
+    // 4. create token pair
+    const tokens = await createTokenPair(
+      { userId: foundShop._id, email },
+      publicKey,
+      privateKey
+    );
+
+    await KeyTokenService.createKeyToken({
+      userId: foundShop._id,
+      publicKey,
+      privateKey,
+      refreshToken: tokens.refreshToken,
+    });
+
+    return {
+      shop: foundShop,
+      tokens,
+    };
+  };
+
   static async signup({ name, email, password }) {
     console.log('AccessService:signup', { name, email, password });
     try {
       // validate input
       if (!name || !email || !password) {
-        return {
-          status: 400,
-          message: 'Name, email and password are required',
-        };
+        throw new BadRequestError('Name, email and password are required');
       }
 
       // check if user already exists
       const existingUser = await ShopModel.findOne({ email }).lean();
       if (existingUser) {
-        return { status: 409, message: 'User already exists' };
+        throw new BadRequestError('User already exists');
       } else {
         // create new user
         const passwordHash = await bcrypt.hash(password, 10);
@@ -73,13 +126,12 @@ class AccessService {
               },
             };
           } else {
-            return { status: 500, message: 'Error creating key token' };
+            throw new BadRequestError('Error creating key token');
           }
         }
       }
     } catch (error) {
-      console.error('Error during signup:', error);
-      return { status: 500, message: 'Internal server error' };
+      throw new BadRequestError(error.message);
     }
   }
 }

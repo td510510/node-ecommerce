@@ -17,8 +17,16 @@ const keyTokenSchema = new Schema(
       type: String,
       required: true,
     },
-    refreshToken: {
+    privateKey: {
+      type: String,
+      required: true,
+    },
+    refreshTokensUsed: {
       type: [String],
+      required: true,
+    },
+    refreshToken: {
+      type: String,
       required: true,
     },
   },
