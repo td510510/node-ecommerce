@@ -1,0 +1,18 @@
+@url_dev=http://localhost:8000/v1/api/
+
+### signup
+POST {{url_dev}}shop/signup
+Content-Type: application/json
+x-api-key: cb4981f2b873c613e6a413d83fd183a93de94c9f39cef5e7d9781662a456924b7f09af3572b163af6562973415a7bff83f7d622b64f6985c0621fe2403257ef0
+
+{
+  "name": "test",
+  "email": "test@example.com",
+  "password": "12345678"
+}
+
+# {
+#   "name": "test",
+#   "email": "aaaa@gamil.coml",
+#   "password": "12345678",
+# }
