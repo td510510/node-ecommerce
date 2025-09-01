@@ -3,6 +3,15 @@ const { Created, SuccessResponse } = require('../core/success.reponse');
 const AccessService = require('../services/access.service');
 
 class AccessController {
+  async signup(req, res, next) {
+    const { name, email, password } = req.body;
+    new Created({
+      message: 'Create new shop account successfully',
+      metadata: await AccessService.signup({ name, email, password }),
+      options: { limit: 10, page: 1 },
+    }).send(res);
+  }
+
   async login(req, res, next) {
     const { email, password, refreshToken } = req.body;
     new SuccessResponse({
@@ -12,11 +21,10 @@ class AccessController {
     }).send(res);
   }
 
-  async signup(req, res, next) {
-    const { name, email, password } = req.body;
-    new Created({
-      message: 'Create new shop account successfully',
-      metadata: await AccessService.signup({ name, email, password }),
+  async logout(req, res, next) {
+    new SuccessResponse({
+      message: 'Logout successfully',
+      metadata: await AccessService.logout({ keyStore: req.keyStore }),
       options: { limit: 10, page: 1 },
     }).send(res);
   }

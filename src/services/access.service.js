@@ -18,57 +18,6 @@ const {
 const { findByEmail } = require('./shop.service');
 const { get } = require('http');
 class AccessService {
-  static login = async ({ email, password, refreshToken = null }) => {
-    // 1. check if shop exists
-    if (!email) {
-      throw new BadRequestError('Invalid email');
-    }
-    const foundShop = await findByEmail({ email });
-    if (!foundShop) {
-      throw new BadRequestError('Shop not registered');
-    }
-
-    // 2. check if password matches
-    const match = await bcrypt.compare(password, foundShop.password);
-    if (!match) {
-      throw new AuthenticationError('Authentication failed');
-    }
-
-    // 3. create privateKey and publicKey by rsa256
-    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'pem',
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'pem',
-      },
-    });
-    console.log('privateKey', privateKey);
-    console.log('publicKey', publicKey);
-
-    // 4. create token pair
-    const tokens = await createTokenPair(
-      { userId: foundShop._id, email },
-      publicKey,
-      privateKey
-    );
-
-    await KeyTokenService.createKeyToken({
-      userId: foundShop._id,
-      publicKey,
-      privateKey,
-      refreshToken: tokens.refreshToken,
-    });
-
-    return {
-      shop: foundShop,
-      tokens,
-    };
-  };
-
   static async signup({ name, email, password }) {
     console.log('AccessService:signup', { name, email, password });
     try {
@@ -134,6 +83,63 @@ class AccessService {
       throw new BadRequestError(error.message);
     }
   }
+
+  static login = async ({ email, password, refreshToken = null }) => {
+    // 1. check if shop exists
+    if (!email) {
+      throw new BadRequestError('Invalid email');
+    }
+    const foundShop = await findByEmail({ email });
+    if (!foundShop) {
+      throw new BadRequestError('Shop not registered');
+    }
+
+    // 2. check if password matches
+    const match = await bcrypt.compare(password, foundShop.password);
+    if (!match) {
+      throw new AuthenticationError('Authentication failed');
+    }
+
+    // 3. create privateKey and publicKey by rsa256
+    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem',
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem',
+      },
+    });
+    console.log('privateKey', privateKey);
+    console.log('publicKey', publicKey);
+
+    // 4. create token pair
+    const tokens = await createTokenPair(
+      { userId: foundShop._id, email },
+      publicKey,
+      privateKey
+    );
+
+    await KeyTokenService.createKeyToken({
+      userId: foundShop._id,
+      publicKey,
+      privateKey,
+      refreshToken: tokens.refreshToken,
+    });
+
+    return {
+      shop: foundShop,
+      tokens,
+    };
+  };
+
+  static logout = async ({ keyStore }) => {
+    console.log('AccessService:logout', keyStore);
+    const removeKey = await KeyTokenService.removeKeyById(keyStore._id);
+    return removeKey;
+  };
 }
 
 module.exports = AccessService;
