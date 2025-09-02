@@ -10,13 +10,13 @@ const RoleShop = {
   EDITOR: 'editor',
   ADMIN: 'admin',
 };
-const { createTokenPair } = require('../auth/authUtils');
+const { createTokenPair, verifyJWT } = require('../auth/authUtils');
 const {
   BadRequestError,
   AuthenticationError,
+  ForbiddenError,
 } = require('../core/error.response');
 const { findByEmail } = require('./shop.service');
-const { get } = require('http');
 class AccessService {
   static async signup({ name, email, password }) {
     console.log('AccessService:signup', { name, email, password });
@@ -139,6 +139,55 @@ class AccessService {
     console.log('AccessService:logout', keyStore);
     const removeKey = await KeyTokenService.removeKeyById(keyStore._id);
     return removeKey;
+  };
+
+  static handlerRefreshToken = async ({ refreshToken }) => {
+    // 1. verify refresh token
+    const foundToken = await KeyTokenService.findByRefreshTokenUsed(
+      refreshToken
+    );
+    if (foundToken) {
+      // check who used this token -> hack
+      const { userId, email } = await verifyJWT(
+        refreshToken,
+        foundToken.privateKey
+      );
+      console.log({ userId, email });
+
+      // delete all key token in db
+      await KeyTokenService.deleteKeyById(userId);
+      throw new ForbiddenError('Something went wrong. Please login again');
+    }
+
+    // if no token used found
+    const holderToken = await KeyTokenService.findByRefreshToken(refreshToken);
+    if (!holderToken) throw new AuthenticationError('Shop not registered');
+
+    // verify token
+    const { userId, email } = await verifyJWT(
+      refreshToken,
+      holderToken.privateKey
+    );
+    console.log({ userId, email });
+
+    const foundShop = await findByEmail({ email });
+    if (!foundShop) throw new AuthenticationError('Shop not registered');
+
+    // create new token pair
+    const tokens = await createTokenPair(
+      { userId, email },
+      holderToken.publicKey,
+      holderToken.privateKey
+    );
+
+    // update token
+    await holderToken.updateOne({
+      $set: { refreshToken: tokens.refreshToken },
+      $addToSet: { refreshTokensUsed: refreshToken },
+    });
+    await holderToken.save();
+
+    return { user: { userId, email }, tokens };
   };
 }
 

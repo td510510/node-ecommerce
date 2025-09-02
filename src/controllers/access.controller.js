@@ -28,6 +28,15 @@ class AccessController {
       options: { limit: 10, page: 1 },
     }).send(res);
   }
+
+  async handlerRefreshToken(req, res, next) {
+    const { refreshToken } = req.body;
+    new SuccessResponse({
+      message: 'Get new access token successfully',
+      metadata: await AccessService.handlerRefreshToken({ refreshToken }),
+      options: { limit: 10, page: 1 },
+    }).send(res);
+  }
 }
 
 module.exports = new AccessController();
