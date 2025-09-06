@@ -112,8 +112,6 @@ class AccessService {
         format: 'pem',
       },
     });
-    console.log('privateKey', privateKey);
-    console.log('publicKey', publicKey);
 
     // 4. create token pair
     const tokens = await createTokenPair(
@@ -186,6 +184,38 @@ class AccessService {
       $addToSet: { refreshTokensUsed: refreshToken },
     });
     await holderToken.save();
+
+    return { user: { userId, email }, tokens };
+  };
+
+  static handlerRefreshTokenV2 = async ({ refreshToken, user, keyStore }) => {
+    const { userId, email } = user;
+
+    if (keyStore.refreshTokensUsed.includes(refreshToken)) {
+      await KeyTokenService.deleteKeyById(userId);
+      throw new ForbiddenError('Something went wrong. Please login again');
+    }
+
+    if (keyStore.refreshToken !== refreshToken) {
+      throw new AuthenticationError('Shop not registered');
+    }
+
+    const foundShop = await findByEmail({ email });
+    if (!foundShop) throw new AuthenticationError('Shop not registered');
+
+    // create new token pair
+    const tokens = await createTokenPair(
+      { userId, email },
+      keyStore.publicKey,
+      keyStore.privateKey
+    );
+
+    // update token
+    await keyStore.updateOne({
+      $set: { refreshToken: tokens.refreshToken },
+      $addToSet: { refreshTokensUsed: refreshToken },
+    });
+    await keyStore.save();
 
     return { user: { userId, email }, tokens };
   };

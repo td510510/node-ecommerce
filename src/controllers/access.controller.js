@@ -1,5 +1,5 @@
 'use strict';
-const { Created, SuccessResponse } = require('../core/success.reponse');
+const { Created, SuccessResponse } = require('../core/success.response');
 const AccessService = require('../services/access.service');
 
 class AccessController {
@@ -30,10 +30,20 @@ class AccessController {
   }
 
   async handlerRefreshToken(req, res, next) {
-    const { refreshToken } = req.body;
+    // new SuccessResponse({
+    //   message: 'Get new access token successfully',
+    //   metadata: await AccessService.handlerRefreshToken({ refreshToken }),
+    //   options: { limit: 10, page: 1 },
+    // }).send(res);
+
+    // v2
     new SuccessResponse({
       message: 'Get new access token successfully',
-      metadata: await AccessService.handlerRefreshToken({ refreshToken }),
+      metadata: await AccessService.handlerRefreshTokenV2({
+        refreshToken: req.refreshToken,
+        user: req.user,
+        keyStore: req.keyStore,
+      }),
       options: { limit: 10, page: 1 },
     }).send(res);
   }
