@@ -6,19 +6,23 @@ const {
   ProductModel,
   ClothingModel,
   ElectronicModel,
+  FurnitureModel,
 } = require('../models/product.model');
 
 // define Factory pattern class to create product
 class ProductFactory {
+  static productRegistry = {};
+
+  static registerProductType(type, refClass) {
+    ProductFactory.productRegistry[type] = refClass;
+  }
+
   static async createProduct(type, payload) {
-    switch (type) {
-      case 'Clothing':
-        return new Clothing(payload).createProduct();
-      case 'Electronic':
-        return new Electronic(payload).createProduct();
-      default:
-        throw new Error(`Invalid product type: ${type}`);
-    }
+    const productClass = ProductFactory.productRegistry[type];
+    if (!type || !productClass)
+      throw new Error(`Invalid product type: ${type}`);
+
+    return new productClass(payload).createProduct();
   }
 }
 
@@ -84,6 +88,24 @@ class Electronic extends Product {
   }
 }
 
-// define
+// define subclass for furniture product
+class Furniture extends Product {
+  async createProduct() {
+    const newFurniture = await FurnitureModel.create({
+      ...this.product_attributes,
+      product_shop: this.product_shop,
+    });
+    if (!newFurniture) throw new BadRequestError('Create new clothing error');
+
+    const newProduct = await super.createProduct(newFurniture._id);
+    if (!newProduct) throw new BadRequestError('Create new product error');
+
+    return newProduct;
+  }
+}
+
+ProductFactory.registerProductType('Electronic', Electronic);
+ProductFactory.registerProductType('Clothing', Clothing);
+ProductFactory.registerProductType('Furniture', Furniture);
 
 module.exports = ProductFactory;
