@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(apiKey);
 router.use(permission('0000'));
 
-router.use('/', require('./access'));
 router.use('/product', require('./product'));
+router.use('/', require('./access'));
 
 module.exports = router;

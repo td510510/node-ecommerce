@@ -1,6 +1,15 @@
 'use strict';
 
 const { BadRequestError } = require('../core/error.response');
+const {
+  findAllDraftsForShop,
+  publishProductByShop,
+  findAllPublishedForShop,
+  unpublishProductByShop,
+  searchProducts,
+  findAllProducts,
+  findProduct,
+} = require('../models/repositories/product.repo');
 
 const {
   ProductModel,
@@ -23,6 +32,67 @@ class ProductFactory {
       throw new Error(`Invalid product type: ${type}`);
 
     return new productClass(payload).createProduct();
+  }
+
+  static async updateProduct(type, payload) {
+    const productClass = ProductFactory.productRegistry[type];
+    if (!type || !productClass)
+      throw new Error(`Invalid product type: ${type}`);
+
+    return new productClass(payload).createProduct();
+  }
+
+  static async publishProductByShop({ product_shop, product_id }) {
+    console.log(
+      'publishProductByShop ~ product_shop, product_id:',
+      product_shop,
+      product_id
+    );
+    return await publishProductByShop({ product_shop, product_id });
+  }
+
+  static async unpublishProductByShop({ product_shop, product_id }) {
+    return await unpublishProductByShop({ product_shop, product_id });
+  }
+
+  static async findAllDraftsForShop({ product_shop, limit = 50, skip = 0 }) {
+    return await findAllDraftsForShop({
+      query: { product_shop, isDraft: true },
+      limit,
+      skip,
+    });
+  }
+
+  static async findAllPublishedForShop({ product_shop, limit = 50, skip = 0 }) {
+    return await findAllPublishedForShop({
+      query: { product_shop, isPublished: true },
+      limit,
+      skip,
+    });
+  }
+
+  static async searchProducts({ keySearch }) {
+    return await searchProducts({ keySearch });
+  }
+
+  static async findAllProducts({
+    limit = 50,
+    sort = 'ctime',
+    page = 1,
+    filter = { isPublished: true },
+    select,
+  }) {
+    return await findAllProducts({
+      limit,
+      sort,
+      page,
+      filter,
+      select,
+    });
+  }
+
+  static async findProduct({ product_id, unSelect }) {
+    return await findProduct({ product_id, unSelect: ['__v'] });
   }
 }
 
