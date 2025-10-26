@@ -88,6 +88,21 @@ class ProductController {
       options: { limit: 10, page: 1 },
     }).send(res);
   }
+
+  async updateProduct(req, res, next) {
+    console.log('UpdateProduct ~ req.body:', req.body);
+    new SuccessResponse({
+      message: 'Update product details successfully',
+      metadata: await ProductService.updateProduct(
+        req.body.product_type,
+        req.params.product_id,
+        {
+          ...req.body,
+        }
+      ),
+      options: { limit: 10, page: 1 },
+    }).send(res);
+  }
 }
 
 module.exports = new ProductController();

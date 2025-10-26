@@ -3,7 +3,11 @@
 const { ProductModel } = require('../product.model');
 const { Type } = require('mongoose');
 const { BadRequestError } = require('../../core/error.response');
-const { getSelectData, unGetSelectData } = require('../../utils');
+const {
+  getSelectData,
+  unGetSelectData,
+  convertToObjectIdMongodb,
+} = require('../../utils');
 
 const findAllDraftsForShop = async ({ query, limit = 50, skip = 0 }) => {
   return await queryProduct({ query, limit, skip });
@@ -80,6 +84,15 @@ const findProduct = async ({ product_id, unSelect }) => {
     .lean();
 };
 
+const updateProductById = async ({
+  product_id,
+  bodyUpdate,
+  model,
+  isNew = true,
+}) => {
+  return await model.findByIdAndUpdate(product_id, bodyUpdate, { new: isNew });
+};
+
 const queryProduct = async ({ query, limit, skip }) => {
   console.log('queryProduct ~ query:', query);
   return await ProductModel.find({ ...query })
@@ -90,6 +103,30 @@ const queryProduct = async ({ query, limit, skip }) => {
     .lean();
 };
 
+const getProductById = async ({ product_id }) => {
+  return await ProductModel.findOne({
+    _id: convertToObjectIdMongodb(product_id),
+  }).lean();
+};
+
+const checkProductByServer = async (products) => {
+  return await Promise.all(
+    products.map(async (product) => {
+      const foundProduct = await getProductById({
+        product_id: product.product_id,
+      });
+      if (!foundProduct) {
+        throw new BadRequestError(`Product not found: ${product.product_id}`);
+      }
+      return {
+        price: foundProduct.product_price,
+        quantity: product.quantity,
+        productId: product.product_id,
+      };
+    })
+  );
+};
+
 module.exports = {
   findAllDraftsForShop,
   publishProductByShop,
@@ -98,4 +135,7 @@ module.exports = {
   searchProducts,
   findAllProducts,
   findProduct,
+  updateProductById,
+  getProductById,
+  checkProductByServer,
 };
