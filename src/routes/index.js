@@ -10,6 +10,7 @@ router.use(permission('0000'));
 
 router.use('/checkout', require('./checkout'));
 router.use('/discount', require('./discount'));
+router.use('/inventory', require('./inventory'));
 router.use('/cart', require('./cart'));
 router.use('/product', require('./product'));
 router.use('/', require('./access'));
